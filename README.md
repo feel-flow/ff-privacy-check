@@ -11,7 +11,7 @@ claude plugin marketplace add feel-flow/feelflow-plugins
 claude plugin install ff-privacy-check@feelflow-plugins
 ```
 
-Codex CLI は `codex plugin marketplace add feel-flow/feelflow-plugins` と `codex plugin add ff-privacy-check@feelflow-plugins`。
+Codex CLI は `codex plugin marketplace add feel-flow/feelflow-plugins` と `codex plugin add ff-privacy-check@feelflow-plugins`（問診は対話で 1 問ずつ進みます）。
 
 ## 使い方
 
@@ -29,16 +29,22 @@ Codex CLI は `codex plugin marketplace add feel-flow/feelflow-plugins` と `cod
 | 段 1 | 問診。コードから読めないことを最大 10 問（2 回目以降は 1 問） |
 | 段 1.5 | 確認。問診の答えとコードから読めたことを並べ、食い違いを裁定 |
 | 段 2 | 実測。read-only で grep と設定読み取りだけ |
-| 段 3 | 所見。`privacy-check-report-YYYYMMDD.md` を出力 |
+| 段 3 | 所見。`privacy-check-report-YYYYMMDD.md` を出力（同日 2 回目以降は `-2` `-3` と連番） |
 
-問診の答えは対象 repo の `.privacy-check/profile.md` に保存されます。`.gitignore` への追加をおすすめします。
+問診の答えは検査対象ディレクトリ直下の `.privacy-check/profile.md` に、所見は同じ場所の `privacy-check-report-*.md` に保存されます。
+所見にはファイルパスと行番号が入るので、どちらも `.gitignore` への追加をおすすめします。
+
+```gitignore
+.privacy-check/
+privacy-check-report-*.md
+```
 
 ## 5 つの欠陥パターン
 
 | # | パターン | 問診で聞くこと | 実測で読むこと |
 | --- | --- | --- | --- |
 | ① | 管理の隙を突かれたランサム感染 | 夜間・休日の体制、復旧テスト | バックアップ定義、異常検知 |
-| ② | パッチ適用前の侵入 | パッチ適用のリードタイム | 自動更新設定、lock、ベースイメージ |
+| ② | パッチ適用前の侵入 | パッチ適用のリードタイム | 自動更新設定、lock、ベースイメージ、デプロイ自動化 |
 | ③ | 認証情報奪取による偽装 | 認証方式、管理者の共有 | MFA、セッション TTL、Cookie 属性 |
 | ④ | サプライチェーン経由の侵入 | 委託先の数と権限 | SBOM、Webhook 署名、外部 API 認証 |
 | ⑤ | 過剰保持による大量漏洩 | 情報の種類、保持方針 | ログの PII、平文カラム、削除ジョブ |

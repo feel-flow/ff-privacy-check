@@ -1,7 +1,7 @@
 # 問診バンク（段 1）
 
-AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使えるよう設計してある。
-「分からない」は常に選べるようにし、その答えは所見で「要確認」として扱う。
+ホストの質問ツール（Claude Code では AskUserQuestion）で 1 問ずつ聞く。選択肢は所見の重みづけに使えるよう設計してある。
+「分からない」は**全問で**常に選べるようにし、その答えは所見で「要確認」として扱う。
 
 ### Q1: 扱っている個人情報の種類はどれですか（複数選択）
 
@@ -10,8 +10,9 @@ AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使�
 - 本人確認書類（免許証・パスポート・マイナンバーカードの画像や番号）
 - 要配慮情報（健康・医療・信条など）
 - 個人情報は扱っていない
+- 分からない
 
-使い道: ⑤の検査深度。本人確認書類・要配慮が含まれると⑤の所見は 1 段階重くする。
+使い道: ⑤の検査深度。本人確認書類・要配慮が含まれると⑤の所見は 1 段階重くする。「扱っていない」でも、下読みで個人情報カラムやアップロード処理が検出されていれば⑤は省かない。
 
 ### Q2: 本人確認書類などの画像を保管していますか
 
@@ -20,7 +21,7 @@ AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使�
 - 外部の本人確認サービスに預けている
 - 分からない
 
-使い道: ⑤の画像系チェックの ON / OFF。「保管していない」のに下読みで ID 画像のアップロード処理が見つかれば段 1.5 で食い違いになる。
+使い道: ⑤の画像系チェックの ON / OFF。「保管していない」のに下読みで本人確認書類と結びつくアップロード処理（同じファイルやパスに kyc / identity / id_card / license / passport が現れる）が見つかれば段 1.5 で食い違いになる。商品画像やアバターなど一般の画像アップロードだけでは食い違いにしない。
 
 ### Q3: 個人情報の保持期間の方針と、削除の方法は
 
@@ -39,7 +40,7 @@ AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使�
 - 外部 IdP / SSO、MFA なし または不明
 - 分からない
 
-使い道: ③の検査対象。自前実装ならパスワード保存と MFA 実装を見る。外部 IdP ならセッションの扱いと管理者経路を見る。
+使い道: ③の検査対象。自前実装ならパスワード保存と MFA 実装を見る。外部 IdP ならセッションの扱いと管理者経路を見る（MFA は IdP 側の設定で repo には現れないので、未検出だけで高にしない）。
 
 ### Q5: 管理者アカウントは何人で共有していますか
 
@@ -73,7 +74,8 @@ AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使�
 - 数日以内
 - 2 週間以内
 - 1 か月以上
-- 決まっていない / 分からない
+- 決まっていない
+- 分からない
 
 使い道: ②の所見の重み。自動更新（Dependabot / Renovate）が未検出で「1 か月以上」なら高。
 
@@ -91,21 +93,23 @@ AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使�
 
 - カレント repo 全体（既定）
 - 特定のサブディレクトリ（自由記述）
+- 分からない（カレント repo 全体として扱う）
 
-使い道: 段 0 下読みと段 2 実測の範囲。除外ディレクトリ（node_modules / vendor / dist / build / .git / coverage / .next / .astro）は常に外す。段 0 で読んだ対象と違う答えになったときは、新しい対象で段 0 をやり直す。
+使い道: 段 0 下読みと段 2 実測の範囲。`.privacy-check/profile.md` と所見レポートは**この対象ディレクトリの直下**に置く。除外ディレクトリ（node_modules / vendor / dist / build / .git / coverage / .next / .astro / .venv / venv / __pycache__ / .vercel / .output / .nuxt / .svelte-kit / target）は常に外す。段 0 で読んだ対象と違う答えになったときは、新しい対象で段 0 をやり直す。
 
 ## 下読みによる質問文の具体化
 
-段 0 で検出したものを質問文に差し込む。検出が無ければ素の質問文を使う。
+段 0 で検出したものを質問文に差し込む。検出が無ければ素の質問文を使う。検出語は各 pattern ファイルの実測手順と同じ正規表現を使う。
 
-| 検出したもの | 差し込む質問 |
+| 検出したもの（正規表現は pattern ファイルと同じ） | 差し込む質問 |
 | --- | --- |
-| 認証ライブラリ（next-auth / passport / devise / django.contrib.auth / firebase auth / supabase auth / lucia / better-auth） | Q4 の冒頭に「`<ライブラリ名>` が見つかりました。」を足す |
-| アップロード処理（multer / formidable / S3 putObject / storage bucket への書き込み） | Q2 の冒頭に「`<path>` に画像の保存処理が見つかりました。」を足す |
-| スケジュールジョブ（cron / schedule / GitHub Actions の schedule） | Q3 の冒頭に「`<path>` に定期ジョブが見つかりました。削除処理は含まれますか。」を足す |
-| 監視 SDK（sentry / datadog / newrelic / cloudwatch） | Q6 の冒頭に「`<SDK 名>` の設定が見つかりました。」を足す |
-| Dependabot / Renovate 設定 | Q8 の冒頭に「自動更新の設定が見つかりました。マージまでの日数を教えてください。」を足す |
-| Webhook 受信処理・外部 API 呼び出し | Q9 の冒頭に「`<path>` に Webhook の受信（または外部 API の呼び出し）が見つかりました。」を足す |
+| 認証ライブラリ（pattern-3: next-auth / @auth/core / passport / devise / django.contrib.auth / firebase/auth / @supabase/auth / lucia / better-auth / auth0 / amazon-cognito / keycloak） | Q4 の冒頭に「`<ライブラリ名>` が見つかりました。」を足す |
+| アップロード処理（pattern-5: `multer|formidable|busboy|putObject|upload\(|storage\.(from|bucket)|createWriteStream`） | Q2 の冒頭に「`<path>` に画像の保存処理が見つかりました。」を足す |
+| 本人確認書類に関わる語（pattern-5: `kyc|identity|id_card|license|passport`） | Q2 の冒頭に「`<path>` に本人確認書類に関わる処理が見つかりました。」を足す |
+| スケジュールジョブ・削除処理（pattern-5: `retention|purge|anonymi[sz]e|pseudonymi[sz]e|delete.*(older|before|expired)|cron|schedule`） | Q3 の冒頭に「`<path>` に定期ジョブが見つかりました。削除処理は含まれますか。」を足す |
+| 監視 SDK（pattern-1: `@sentry|datadog|newrelic|cloudwatch|opentelemetry`） | Q6 の冒頭に「`<SDK 名>` の設定が見つかりました。」を足す |
+| 自動更新設定（pattern-2: dependabot.yml / renovate.json 等） | Q8 の冒頭に「自動更新の設定が見つかりました。マージまでの日数を教えてください。」を足す |
+| Webhook 受信・外部 API 呼び出し（pattern-4: `webhook`、`(fetch|axios|got|requests|httpx|http\.get|urllib)\(.*https?://`） | Q9 の冒頭に「`<path>` に Webhook の受信（または外部 API の呼び出し）が見つかりました。」を足す |
 
 ## profile.md がある場合
 
@@ -139,4 +143,4 @@ AskUserQuestion で 1 問ずつ聞く。選択肢は所見の重みづけに使�
 | --- | --- | --- | --- | --- |
 ```
 
-段 1.5 で確定した表をそのまま「段 1.5 の裁定」節に保存する。
+段 1.5 で確定した表（裁定列まで埋まったもの）をそのまま「段 1.5 の裁定」節に保存する。

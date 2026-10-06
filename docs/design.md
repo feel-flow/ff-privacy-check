@@ -2,6 +2,8 @@
 
 原本は feel-flow/feelflow-website-2026 の `docs/superpowers/specs/2026-10-06-privacy-check-plugin-and-articles-design.md`（Issue #2126）。ここには plugin に関わる「5 つの欠陥パターン」「第 1 節」「第 2 節」を写している。記事側の設計は原本を参照。
 
+実装（`skills/privacy-check/SKILL.md` と `references/`）は、公開前の read-only レビューで次を spec より厳しくしている: 段 1.5 の表は裁定列つきの 5 列、`未検出` は「無い」ではなく「読めなかった」、問診の答えだけで検査を省かない（段 0 で未検出の場合のみ）、Q10 で対象が変わったら段 0 をやり直す、除外ディレクトリは 16 個と `.env*` / minified / lock、秘密情報を探す grep は path:line だけを出力する。spec と実装が食い違うときは実装を正とする。
+
 ## 5 つの欠陥パターン（共通の軸）
 
 | # | パターン | 実測で読めること | 問診でしか分からないこと |

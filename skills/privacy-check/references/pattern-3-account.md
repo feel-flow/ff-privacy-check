@@ -9,21 +9,21 @@ Q4（認証方式と MFA）、Q5（管理者アカウントの共有）。
 
 ## 実測手順
 
-対象ディレクトリの中で読む。すべての grep に共通の除外指定 `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付ける（brace 展開は bash / zsh の両方で 8 個の引数に展開される）。
-秘密情報らしき値が見つかっても、レポートには**パスと行番号だけ**を書き、値を書かない。
+対象ディレクトリの中で読む。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。
+秘密情報らしき値が見つかっても、レポートには**パスと行番号だけ**を書き、値を書かない。秘密情報の検出コマンドは `cut -d: -f1,2` で path:line に切り詰めてから出力し、一致行の中身をツール出力にも出さない。
 
 ```bash
 # 認証ライブラリ
-grep -rniE "next-auth|@auth/core|passport|devise|django\.contrib\.auth|firebase/auth|@supabase/(auth|ssr)|lucia|better-auth|auth0|amazon-cognito|keycloak" --include="package.json" --include="Gemfile" --include="requirements*.txt" --include="pyproject.toml" --include="*.ts" --include="*.py" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
+grep -rniE "next-auth|@auth/core|passport|devise|django\.contrib\.auth|firebase/auth|@supabase/(auth|ssr)|lucia|better-auth|auth0|amazon-cognito|keycloak" --include="package.json" --include="Gemfile" --include="requirements*.txt" --include="pyproject.toml" --include="*.ts" --include="*.py" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -20
 # MFA の実装
-grep -rniE "totp|otpauth|webauthn|fido|passkey|mfa|two[_-]?factor|2fa" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -30
+grep -rniE "totp|otpauth|webauthn|fido|passkey|mfa|two[_-]?factor|2fa" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -30
 # セッション・Cookie の設定
-grep -rniE "maxAge|max_age|expires|ttl|SESSION_COOKIE_AGE|httpOnly|sameSite|secure:\s*(true|false)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -40
+grep -rniE "maxAge|max_age|expires(In|_in)?\b|\bttl\b|SESSION_COOKIE_AGE|httpOnly|sameSite|secure:\s*(true|false)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -40
 # パスワードの保存方式
-grep -rniE "bcrypt|argon2|scrypt|pbkdf2" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -10
-grep -rniE "(md5|sha1)\(.*(pass|pwd)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -10
-# ハードコードされた秘密情報（.env.example は除く）
-grep -rnE "(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} --exclude="*.example" --exclude="*.sample" . | head -20
+grep -rniE "bcrypt|argon2|scrypt|pbkdf2" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -10
+grep -rniE "(md5|sha1)\(.*(pass|pwd)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -10
+# ハードコードされた秘密情報（.env.example は除く。-i で SECRET_KEY / apiKey も拾い、cut で path:line だけ出す）
+grep -rniE "(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' --exclude="*.example" --exclude="*.sample" . | cut -d: -f1,2 | head -20
 ```
 
 読み取ること:
@@ -37,8 +37,9 @@ grep -rnE "(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}
 
 | 実測 | 問診 | 優先度 |
 | --- | --- | --- |
-| MFA 未検出 | Q4 が「自前、MFA なし」かつ Q5 が「2 人以上で共有」 | 高 |
-| MFA 未検出 | Q4 が「MFA あり」 | 食い違い → 段 1.5 で裁定。そのまま進むなら高 |
+| MFA 未検出 | Q4 が「自前実装のパスワード認証、MFA なし」かつ Q5 が「2〜3 人で共有」または「4 人以上で共有」 | 高 |
+| MFA 未検出 | Q4 が「自前実装、MFA あり」 | 食い違い → 段 1.5 で裁定。そのまま進むなら高 |
+| MFA 未検出 | Q4 が「外部 IdP / SSO、MFA あり」 | 要確認（MFA は IdP 側の設定で repo には現れない。高にするには IdP を迂回するログイン経路など実測の事実が要る） |
 | セッション TTL が 30 日超または無期限 | どの答えでも | 中 |
 | Cookie に HttpOnly / Secure が未検出 | どの答えでも | 中 |
 | md5 / sha1 でパスワードをハッシュ | どの答えでも | 高 |

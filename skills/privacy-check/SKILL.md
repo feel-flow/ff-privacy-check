@@ -30,41 +30,49 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 
 - 許可: grep、ファイル読み取り、パッケージマニフェストと lock ファイルの読み取り、`git ls-files`
 - 禁止: ビルド、テスト実行、パッケージのインストール、外部送信（`npm audit` など registry へ問い合わせるコマンドを含む）、git 書き込み（commit / push / stash / checkout）、ファイル作成（例外は段 3 の所見レポートと `.privacy-check/profile.md` の 2 つだけ）
-- 除外ディレクトリ: `node_modules` / `vendor` / `dist` / `build` / `.git` / `coverage` / `.next` / `.astro`。grep には `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付け（brace 展開は bash / zsh の両方で効く。変数にまとめると zsh では単語分割されないので使わない）、find には同じ名前の prune を入れる
-- 読んだ秘密情報（キー・トークン・パスワード）は値をレポートに書かない。パスと行番号だけ書く
+- 除外ディレクトリ: `node_modules` / `vendor` / `dist` / `build` / `.git` / `coverage` / `.next` / `.astro` / `.venv` / `venv` / `__pycache__` / `.vercel` / `.output` / `.nuxt` / `.svelte-kit` / `target`。grep には `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target}` を付け（brace 展開は bash / zsh の両方で効く。変数にまとめると zsh では単語分割されないので使わない）、find には同じ名前の prune を入れる
+- 除外ファイル: `--exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml'`。`.env*` の中身は読まない（追跡状態だけを `git ls-files` で見る）。minified JS と lock ファイルは 1 行が巨大で `head` の枠を食いつぶす
+- 読んだ秘密情報（キー・トークン・パスワード）は値をレポートに書かない。パスと行番号だけ書く。秘密情報や URL 埋め込みキーを探す grep は `cut -d: -f1,2` で path:line に切り詰めてから出力し、一致行の中身をツール出力にも出さない
 
 ## 段 0: 下読み
 
 判定はしない。「何がどこにあるか」だけを押さえ、段 1 の質問文の具体化と段 1.5 の表に使う。
 
-1. 対象ディレクトリを決める。引数が無ければカレント repo。`.privacy-check/profile.md` があれば Q10 の答えを使う
+1. 対象ディレクトリを決める。引数が無ければカレント repo。`.privacy-check/profile.md` があれば Q10 の答えを使う。以後の `.privacy-check/` と所見レポートは**対象ディレクトリの直下**に置く（cwd ではない）
 2. 次を読む: 言語とフレームワーク（マニフェスト）、ORM / スキーマ / マイグレーションの場所、認証ライブラリ、
    セッション管理の実装箇所、ログライブラリと出力箇所、CI 設定、スケジュールジョブ、バックアップ定義、
-   アップロード処理、Webhook 受信処理、外部 API 呼び出し、監視 SDK、自動更新設定（Dependabot / Renovate）
-3. 何も検出できない項目は `未検出` と記録する（空 repo や未知の言語でも止まらない）
+   アップロード処理、本人確認書類に関わる語、Webhook 受信処理、外部 API 呼び出し、監視 SDK、自動更新設定（Dependabot / Renovate）
+3. 下読みの検出語は、段 2 で同じ対象を検査する pattern ファイルの正規表現と**同じもの**を使う（下読みが段 2 より弱いと、段 2 の省略判定が誤る）:
+   - アップロード処理: `multer|formidable|busboy|putObject|upload\(|storage\.(from|bucket)|createWriteStream`（pattern-5）
+   - 本人確認書類: `kyc|identity|id_card|license|passport`（pattern-5）
+   - Webhook / 外部 API: `webhook` と `(fetch|axios|got|requests|httpx|http\.get|urllib)\(.*https?://`（pattern-4）
+   - 認証 / MFA: pattern-3 の認証ライブラリと MFA の正規表現
+   - 監視 / バックアップ / 検知: pattern-1 の正規表現
+   - 自動更新 / デプロイ: pattern-2 の find と grep
+4. 何も検出できない項目は `未検出` と記録する（空 repo や未知の言語でも止まらない）
 
 ## 段 1: 問診
 
 1. `references/question-bank.md` を読む
 2. `.privacy-check/profile.md` があり、保存形式どおりに読めるときは「前回の答えを使う / 更新する / 答え直す」の 1 問だけを出す。
    読めない（列が欠けている・Q 番号が揃わない）ときはその旨を 1 行伝え、**Q1 から**聞き直す。黙って空欄で進まない
-3. AskUserQuestion で Q1〜Q10 を 1 問ずつ聞く。段 0 の検出結果で質問文を具体化する（question-bank の表に従う）
+3. ホストの質問ツール（Claude Code では AskUserQuestion。無いホストでは通常の対話）で Q1〜Q10 を 1 問ずつ聞く。段 0 の検出結果で質問文を具体化する（question-bank の表に従う）
 4. 「分からない」は常に選べるようにし、所見では「要確認」として扱う
 5. Q10 の答えが段 0 で読んだ対象と違う（広がった・狭まった・別ディレクトリになった）ときは、新しい対象で段 0 をやり直してから段 1.5 へ進む。古い下読みの結果を確認表に使わない
 
 ## 段 1.5: 確認
 
-1. パターン①〜⑤ごとに「問診の答え / コードから読めたこと / 食い違い」の表を 1 枚出す。
+1. パターン①〜⑤ごとに「問診の答え / コードから読めたこと / 食い違い / 裁定」の表を 1 枚出す（裁定列は空のまま提示する）。
    下読みで何も見つからなかった列は `未検出` と書く（`未検出` は「無い」ではなく「読めなかった」）
-2. 「この理解で検査に進んでよいか」を 1 問で聞く。食い違いがある行は「問診の答えを直す / コードの読みが違う / そのまま進む」から選んでもらう
+2. 「この理解で検査に進んでよいか」を 1 問で聞く。食い違いがある行は「問診の答えを直す / コードの読みが違う / そのまま進む」から選んでもらい、裁定列に記入する
 3. 確定した表を `.privacy-check/profile.md` に保存する（形式は question-bank の「profile.md の保存形式」）。
-   対象 repo が git 管理下なら、`.privacy-check/` が `.gitignore` に無いことを 1 行で知らせる（追加はしない）
+   対象 repo が git 管理下なら、`.privacy-check/` と `privacy-check-report-*.md` が `.gitignore` に無いことを 1 行で知らせる（追加はしない）
 4. 「そのまま進む」とした行は段 3 で必ず所見に残す。自己申告と実装の不一致はそれ自体が②③の典型要因である
 
 ## 段 2: 実測
 
 1. パターンごとに `references/pattern-N-*.md` を読み、「実測手順」のコマンドを対象ディレクトリで実行する
-2. 問診で検査範囲が狭まるもの（Q1 が「個人情報は扱っていない」なら⑤の画像系、Q9 が「外部連携は無い」なら④の Webhook）は、
+2. 問診で検査範囲が狭まるもの（Q1 が「個人情報は扱っていない」なら⑤全体、Q2 が「保管していない」なら⑤の画像系、Q9 が「外部連携は無い」なら④の Webhook と外部 API）は、
    **段 0 の下読みで関連実装が未検出だった場合に限って**省く。下読みで Webhook 受信・アップロード処理などが検出されているときは省かず、
    問診の答えとの食い違いとして段 3 の所見に残す（自己申告で検査を外せる設計にしない）
 3. 見つかった事実はパスと行番号つきで控える。推測は事実と分けて控える
@@ -72,8 +80,8 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 
 ## 段 3: 所見
 
-1. `references/report-template.md` を読み、同じ見出し構成で `privacy-check-report-YYYYMMDD.md` をカレント作業ディレクトリに書く
-   （YYYYMMDD は実行日。保存先の指定があればそちら）
+1. `references/report-template.md` を読み、同じ見出し構成で `privacy-check-report-YYYYMMDD.md` を対象ディレクトリの直下に書く
+   （YYYYMMDD は実行日。同じ日に 2 回目以降を実行するときは `-2` `-3` と連番を付け、既存のレポートを上書きしない。保存先の指定があればそちら）
 2. 「段 1.5 の確認結果」に確定した表をそのまま載せる
 3. 「パターン別所見」は 4 項目（問診の答え / 実測で見つかった事実 / 所見と優先度 / 直し方の方向）で書く。
    事実が無い項目は「該当なし」。実測で見つかっていないことを推測で所見にしない

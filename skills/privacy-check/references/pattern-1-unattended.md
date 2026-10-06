@@ -9,17 +9,17 @@ Q6（夜間・休日の体制）、Q7（復旧テスト）。
 
 ## 実測手順
 
-対象ディレクトリの中で読む。すべての grep に共通の除外指定 `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付ける（brace 展開は bash / zsh の両方で 8 個の引数に展開される）。
+対象ディレクトリの中で読む。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。
 
 ```bash
 # バックアップの定義（IaC・compose・CI・スクリプト）
-grep -rniE "backup|snapshot|pg_dump|mysqldump|mongodump" --include="*.tf" --include="*.yml" --include="*.yaml" --include="*.sh" --include="*.mjs" --include="*.ts" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -50
+grep -rniE "backup|snapshot|pg_dump|mysqldump|mongodump" --include="*.tf" --include="*.yml" --include="*.yaml" --include="*.sh" --include="*.mjs" --include="*.ts" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -50
 # バックアップ先の分離（別アカウント・別リージョン・オブジェクトロック・バージョニング）
-grep -rniE "object_lock|immutab|versioning|cross[_-]region|replica|retention_in_days|lifecycle" --include="*.tf" --include="*.yml" --include="*.yaml" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -30
+grep -rniE "object_lock|immutab|versioning|cross[_-]region|replica|retention_in_days|lifecycle" --include="*.tf" --include="*.yml" --include="*.yaml" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -30
 # 異常検知・レート制限・自動遮断
-grep -rniE "rate[_-]?limit|anomal|threshold|alert|lockout|too_many|429" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -50
+grep -rniE "rate[_-]?limit|anomal|threshold|alert\(|lockout|too_many|status.{0,12}429" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -50
 # 監視 SDK
-grep -rliE "@sentry|datadog|newrelic|cloudwatch|opentelemetry" --include="*.json" --include="*.ts" --include="*.js" --include="*.py" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
+grep -rliE "@sentry|datadog|newrelic|cloudwatch|opentelemetry" --include="*.json" --include="*.ts" --include="*.js" --include="*.py" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -20
 ```
 
 読み取ること:
