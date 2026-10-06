@@ -85,3 +85,44 @@ test("every pattern reference has the four sections", () => {
     );
   }
 });
+
+test("SKILL.md has frontmatter, references, stages and read-only rules", () => {
+  const skillPath = join(skillDir, "SKILL.md");
+  assert.ok(existsSync(skillPath), "SKILL.md が無い");
+  const skill = read(skillPath);
+  const frontmatter = skill.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+  assert.match(frontmatter, /^name: privacy-check$/m);
+  assert.match(frontmatter, /^description: .{40,}/m);
+
+  const refs = [...skill.matchAll(/references\/([\w.-]+\.md)/g)].map((m) => m[1]);
+  assert.ok(refs.length >= 7, `references の参照が少ない: ${refs.length}`);
+  for (const ref of new Set(refs)) {
+    assert.ok(existsSync(join(refDir, ref)), `参照先が無い: references/${ref}`);
+  }
+
+  for (const stage of [
+    "## 段 0: 下読み",
+    "## 段 1: 問診",
+    "## 段 1.5: 確認",
+    "## 段 2: 実測",
+    "## 段 3: 所見",
+  ]) {
+    assert.match(skill, new RegExp(`^${stage}$`, "m"), `${stage} が無い`);
+  }
+  for (const word of ["ビルド", "テスト実行", "外部送信", "git"]) {
+    assert.match(skill, new RegExp(word), `read-only 規定に「${word}」が無い`);
+  }
+  assert.match(skill, /node_modules/, "除外ディレクトリの記載が無い");
+  assert.match(skill, /Q1 から/, "profile.md が読めないときの規定が無い");
+  assert.match(
+    skill,
+    /未検出だった場合に限って/,
+    "問診の答えだけで検査を省く経路が残っている"
+  );
+  assert.match(
+    skill,
+    /段 0 をやり直して/,
+    "Q10 で対象が変わったときに下読みをやり直す規定が無い"
+  );
+  assert.match(skill, /この検査で見つからないもの/, "固定節への言及が無い");
+});
