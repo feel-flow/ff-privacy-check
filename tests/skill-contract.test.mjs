@@ -44,6 +44,19 @@ test("plugin.json declares name / version / license / description", () => {
   );
 });
 
+test("marketplace.json makes this public repo installable without feelflow-plugins", () => {
+  const marketplacePath = join(root, ".claude-plugin", "marketplace.json");
+  assert.ok(existsSync(marketplacePath), "marketplace.json が無い（feelflow-plugins は private なので公開読者はここから入れる）");
+  const marketplace = JSON.parse(read(marketplacePath));
+  assert.equal(marketplace.name, "ff-privacy-check");
+  assert.equal(marketplace.plugins.length, 1);
+  assert.equal(marketplace.plugins[0].name, "ff-privacy-check");
+  assert.equal(marketplace.plugins[0].source, "./");
+  const readme = read(join(root, "README.md"));
+  assert.ok(readme.includes("claude plugin marketplace add feel-flow/ff-privacy-check"), "README の導入が公開 marketplace 経路になっていない");
+  assert.ok(readme.includes("claude plugin install ff-privacy-check@ff-privacy-check"), "README の install が公開 marketplace 名になっていない");
+});
+
 test("report template has the fixed sections", () => {
   const template = read(join(refDir, "report-template.md"));
   assert.match(template, /^## サマリ$/m);

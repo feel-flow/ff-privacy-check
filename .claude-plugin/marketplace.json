@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ff-privacy-check",
+  "description": "個人情報流出につながるシステム側の欠陥を Claude Code で簡易検査する plugin ff-privacy-check を配布する公開マーケットプレイス",
+  "owner": {
+    "name": "FeelFlow Inc.",
+    "email": "futoshi@feelflow.co.jp"
+  },
+  "plugins": [
+    {
+      "name": "ff-privacy-check",
+      "description": "個人情報流出につながるシステム側の欠陥を Claude Code で簡易検査する。問診（コードから読めないこと）と実測（コードから読めること）を突き合わせ、5 つの欠陥パターンごとに優先度つきの所見と「見つからないもの」を出力する 1 コマンド。",
+      "author": {
+        "name": "FeelFlow Inc."
+      },
+      "category": "development",
+      "source": "./"
+    }
+  ]
+}
