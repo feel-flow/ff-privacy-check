@@ -85,7 +85,7 @@ test("report template has the fixed sections", () => {
   assert.equal(bullets.length, 6, "「見つからないもの」は 6 項目を固定で載せる");
 });
 
-test("question bank has Q1..Q10, a 分からない option on every question, and the re-run rule", () => {
+test("question bank has Q1..Q10, 2-4 options per (sub)question, a 分からない option, and the re-run rule", () => {
   const bank = read(join(refDir, "question-bank.md"));
   const sections = bank.split(/^### /m).slice(1);
   const questions = sections.filter((s) => /^Q\d+: /.test(s));
@@ -93,7 +93,16 @@ test("question bank has Q1..Q10, a 分からない option on every question, and
   for (let i = 1; i <= 10; i += 1) {
     const section = questions.find((s) => s.startsWith(`Q${i}: `));
     assert.ok(section, `Q${i} が無い`);
-    assert.match(section, /^- 分からない/m, `Q${i} に「分からない」の選択肢が無い`);
+    const body = section.split(/^## /m)[0];
+    assert.match(body, /^- .*分からない/m, `Q${i} に「分からない」を含む選択肢が無い`);
+    // AskUserQuestion は 1 問あたり選択肢 2〜4 件。小問（####）があれば小問ごとに数える
+    const chunks = body.split(/^#### /m);
+    const optionChunks = chunks.filter((c) => /^- /m.test(c));
+    assert.ok(optionChunks.length > 0, `Q${i} に選択肢が無い`);
+    for (const chunk of optionChunks) {
+      const options = chunk.split("\n").filter((l) => l.startsWith("- ")).length;
+      assert.ok(options >= 2 && options <= 4, `Q${i} の選択肢は 2〜4 件（AskUserQuestion の上限）: ${options} 件 — ${chunk.split("\n")[0].slice(0, 40)}`);
+    }
   }
   assert.doesNotMatch(bank, /^### Q11: /m, "Q11 以降は仕様外");
   assert.match(bank, /^## 下読みによる質問文の具体化$/m);
