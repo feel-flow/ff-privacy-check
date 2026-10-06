@@ -57,3 +57,31 @@ test("question bank has Q1..Q10 and the re-run rule", () => {
   assert.match(bank, /^## profile\.md がある場合$/m);
   assert.match(bank, /^## profile\.md の保存形式$/m);
 });
+
+test("every pattern reference has the four sections", () => {
+  const patterns = readdirSync(refDir)
+    .filter((f) => /^pattern-[1-5]-[a-z-]+\.md$/.test(f))
+    .sort();
+  assert.equal(patterns.length, 5, `pattern ファイルは 5 本: ${patterns.join(", ")}`);
+  for (const file of patterns) {
+    const body = read(join(refDir, file));
+    for (const heading of [
+      "## 対応する問診",
+      "## 実測手順",
+      "## 所見の書き方",
+      "## 直し方の方向",
+    ]) {
+      assert.match(
+        body,
+        new RegExp(`^${heading}$`, "m"),
+        `${file} に ${heading} が無い`
+      );
+    }
+    assert.match(body, /```bash/, `${file} に実測コマンドの例が無い`);
+    assert.match(
+      body,
+      /^EX='--exclude-dir=node_modules /m,
+      `${file} の実測ブロックに共通の除外変数 EX が無い`
+    );
+  }
+});
