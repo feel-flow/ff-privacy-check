@@ -14,7 +14,7 @@
         "name": "FeelFlow Inc."
       },
       "category": "development",
-      "source": "./"
+      "source": "./plugins/ff-privacy-check"
     }
   ]
 }

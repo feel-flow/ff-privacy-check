@@ -45,14 +45,19 @@ test("plugin.json declares name / version / license / description", () => {
   );
 });
 
-test("marketplace.json makes this public repo installable without feelflow-plugins", () => {
-  const marketplacePath = join(root, ".claude-plugin", "marketplace.json");
-  assert.ok(existsSync(marketplacePath), "marketplace.json が無い（feelflow-plugins は private なので公開読者はここから入れる）");
+test("marketplace.json at the public root makes this plugin installable without a private marketplace", () => {
+  // SSOT では oss/ff-privacy-check/.claude-plugin/、公開リポジトリではルートの .claude-plugin/ にある
+  const candidates = [
+    join(root, "..", "..", "oss", "ff-privacy-check", ".claude-plugin", "marketplace.json"),
+    join(root, "..", "..", ".claude-plugin", "marketplace.json"),
+  ];
+  const marketplacePath = candidates.find((p) => existsSync(p));
+  assert.ok(marketplacePath, `marketplace.json が無い: ${candidates.join(" / ")}`);
   const marketplace = JSON.parse(read(marketplacePath));
   assert.equal(marketplace.name, "ff-privacy-check");
   assert.equal(marketplace.plugins.length, 1);
   assert.equal(marketplace.plugins[0].name, "ff-privacy-check");
-  assert.equal(marketplace.plugins[0].source, "./");
+  assert.equal(marketplace.plugins[0].source, "./plugins/ff-privacy-check");
   const readme = read(join(root, "README.md"));
   assert.ok(readme.includes("claude plugin marketplace add feel-flow/ff-privacy-check"), "README の導入が公開 marketplace 経路になっていない");
   assert.ok(readme.includes("claude plugin install ff-privacy-check@ff-privacy-check"), "README の install が公開 marketplace 名になっていない");
@@ -229,7 +234,9 @@ test("the read-time mask hides short and quoted-key secrets (behavioral, bash an
     'const o = { maxAge: 3600, password: "demo-short-key" };',
     "API_KEY=abc Authorization: Bearer xyz",
   ].join("\n");
-  for (const shell of ["bash", "zsh"]) {
+  // zsh が無い環境（CI の ubuntu など）では bash だけで検査する
+  const shells = ["bash", ...(spawnSync("zsh", ["-c", "true"]).status === 0 ? ["zsh"] : [])];
+  for (const shell of shells) {
     const { status, stdout } = spawnSync(
       shell,
       ["-c", `printf '%s' "$0" | ${mask}`, sample],

@@ -26,10 +26,10 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 
 ## 守ること（read-only）
 
-段 0 と段 2 は読むだけで行う。
+段 0 と段 2 の実測は読むだけで行う（例外は下の 2 ファイルへの書き込みだけ）。
 
 - 許可: grep、ファイル読み取り、パッケージマニフェストと lock ファイルの読み取り、`git ls-files`
-- 禁止: ビルド、テスト実行、パッケージのインストール、外部送信（`npm audit` など registry へ問い合わせるコマンドを含む）、git 書き込み（commit / push / stash / checkout）、ファイル作成（例外は段 3 の所見レポートと `.privacy-check/profile.md` の 2 つだけ）
+- 禁止: ビルド、テスト実行、パッケージのインストール、外部送信（`npm audit` など registry へ問い合わせるコマンドを含む）、git 書き込み（commit / push / stash / checkout）、対象 repo のファイル変更。**書いてよいファイルは 2 つだけ**: `.privacy-check/profile.md`（段 1.5 で作成・更新し、段 2 で新しい裁定を追記する）と、段 3 の所見レポート `privacy-check-report-YYYYMMDD.md`。それ以外は読むだけ
 - 除外ディレクトリ: `node_modules` / `vendor` / `dist` / `build` / `.git` / `coverage` / `.next` / `.astro` / `.venv` / `venv` / `__pycache__` / `.vercel` / `.output` / `.nuxt` / `.svelte-kit` / `target`。grep には `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target}` を付け（brace 展開は bash / zsh の両方で効く。変数にまとめると zsh では単語分割されないので使わない）、find には同じ名前の prune を入れる
 - 除外ファイル: `--exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml'`。`.env*` の中身は読まない（追跡状態だけを `git ls-files` で見る）。minified JS と lock ファイルは 1 行が巨大で `head` の枠を食いつぶす
 - 読んだ秘密情報（キー・トークン・パスワード）は値をレポートに書かない。パスと行番号だけ書く。一致行を出力する grep はすべて `cut -d: -f1,2` で path:line に切り詰めてから出力する（grep の段階では値を一切出さない）。該当行を開いて確認するときは `sed -n "<行番号>p" <path> | sed -E "s/\"[^\"]{16,}\"/\"***\"/g; s/'[^']{16,}'/'***'/g; s/([:=][[:space:]]*)[^[:space:]\"']{20,}/\1***/g; s/((password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|cookie|private[_-]?key|client[_-]?secret)[A-Za-z0-9_]*[\"']?[[:space:]]*[:=][[:space:]]*)(\"[^\"]*\"|'[^']*'|[^,;]+)/\1***/Ig"` の形で伏せ字を通す（引用符内の任意文字 16 文字以上と、`=` / `:` の後ろの 20 文字以上、および password / secret / token / api_key 等のキー名に続く値は長さによらず `***` へ）
@@ -74,7 +74,7 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 1. パターンごとに `references/pattern-N-*.md` を読み、「実測手順」のコマンドを対象ディレクトリで実行する
 2. 問診で検査範囲が狭まるもの（Q1 が「個人情報は扱っていない」なら⑤全体、Q2 が「保管していない」なら⑤の画像系、Q9 が「外部連携は無い」なら④の Webhook と外部 API）は、
    **段 0 の下読みで関連実装が未検出だった場合に限って**省く。下読みで Webhook 受信・アップロード処理などが検出されているときは省かず、
-   問診の答えとの食い違いとして段 3 の所見に残す（自己申告で検査を外せる設計にしない）
+   問診の答えとの食い違いとして段 3 の所見に残す（自己申告で検査を外せる設計にしない）。⑤を省く場合でも、pattern-5 の「`.env` の実体が追跡されていないか」の確認だけは必ず実行する（どの答えでも高の項目で、他のパターンには無い）
 3. 見つかった事実はパスと行番号つきで控える。推測は事実と分けて控える
 4. 実測で、段 1.5 の表に無かった食い違いが新たに見つかったとき（例: Q3「自動で削除」で定期ジョブは下読みで検出していたが、実測でそのジョブに削除処理が無い）は、その行だけ段 1.5 に戻って「問診の答えを直す / コードの読みが違う / そのまま進む」を聞き、裁定を `profile.md` の表へ追記してから段 3 へ進む。人が裁定していない食い違いをレポートに残さない
 5. 各パターンの「所見の書き方」表で優先度を決める。表に無い組み合わせは、問診の重み × 実測の事実で判断し、根拠を 1 行書く

@@ -1,6 +1,8 @@
 # ff-privacy-check 設計
 
-原本は feel-flow/feelflow-website-2026 の `docs/superpowers/specs/2026-10-06-privacy-check-plugin-and-articles-design.md`（Issue #2126）。ここには plugin に関わる「5 つの欠陥パターン」「第 1 節」「第 2 節」を写している。記事側の設計は原本を参照。
+原本は社内の設計 spec（非公開）。ここには plugin に関わる「5 つの欠陥パターン」「第 1 節」「第 2 節」を写している。
+
+**配布構成（現行）**: ソースの正本は株式会社フィールフロウの社内リポジトリ（非公開）の `plugins/ff-privacy-check/` にあり、公開リポジトリ feel-flow/ff-privacy-check は一方向同期のミラー（公開側は `plugins/ff-privacy-check/` + ルート `.claude-plugin/marketplace.json`、source は `./plugins/ff-privacy-check`）。公開側を直接編集しても次回の同期で消える。
 
 実装（`skills/privacy-check/SKILL.md` と `references/`）は、公開前のレビューで次を spec より厳しくしている: 段 1.5 の表は裁定列つきの 5 列、`未検出` は「無い」ではなく「読めなかった」、問診の答えだけで検査を省かない（段 0 で未検出の場合のみ）、Q10 で対象が変わったら段 0 をやり直す、段 2 で新たに見つかった食い違いは段 1.5 へ戻す、除外ディレクトリは 16 個と `.env*` / minified / lock、一致行を出す grep は path:line のみ出力し該当行は伏せ字 sed を通して開く、問診の選択肢は AskUserQuestion の上限（2〜4 件）に合わせて小問に分ける、repo 内の保存済みプロファイルを段 0 で探索する。spec と実装が食い違うときは実装を正とする。
 
@@ -101,13 +103,12 @@ address / birth など）が渡っていないか。ORM スキーマに平文の
 
 ### 新 repo `feel-flow/ff-privacy-check`
 
-public、Apache-2.0。repo ルートがそのまま plugin ルート
-（前例: `feel-flow/ff-work-toolkit`）。
+public、Apache-2.0。layout は ff-dev-toolkit と同じ `plugins/ff-privacy-check/` + ルート
+`.claude-plugin/marketplace.json`（source `./plugins/ff-privacy-check`。公開ルートの marketplace.json は社内リポジトリ側では `oss/ff-privacy-check/` にあり、plugin ディレクトリの中には置かない）。下の構成は plugin ディレクトリの中身。
 
 ```text
 ff-privacy-check/
-  .claude-plugin/plugin.json      name / version 0.1.0 / description / license
-  .claude-plugin/marketplace.json この repo 自身を公開 marketplace にする（plugins[0].source は ./）
+  .claude-plugin/plugin.json      name / version（現行の値はファイルを正とする）/ description / license
   LICENSE
   README.md                        導入 3 行 + 使い方 + 見つからないものの明記
   docs/
@@ -127,15 +128,16 @@ ff-privacy-check/
     skill-contract.test.mjs        frontmatter、references の参照切れ、雛形の必須節
 ```
 
-ff-work-toolkit と違い、private 側からの生成器は置かない。社内限定の内容が
-無く、public repo を直接正本にしたほうが記事からの導線と一致する。
+**ソースの正本は社内リポジトリ（非公開）の `plugins/ff-privacy-check/`**（2026-10-07 に方針変更）。
+公開 repo はミラーで、ff-dev-toolkit と同じ `scripts/sync-*-to-public.sh` の一方向同期（git HEAD の allowlist を
+staging に展開 → 禁止パターン・到達不能参照の検査 → `--delete` ミラー）で更新する。公開 repo へ直接コミットしない。
+公開対象には非公開リポジトリ名など禁止パターンに当たる文字列を書かない（同期の検査で fail-closed に止まる）。
+初版（v0.1.0〜v0.1.8）は公開 repo 直書きで公開し、v0.2.0 から SSOT 同期へ移行する（plugin.json の version を 0.2.0 に上げた変更が最初の同期）。
 
 ### 配布
 
-1. 新 repo を作成し、初版を PR → merge → `v0.1.0` tag。repo 自身が公開 marketplace
-   （`feelflow-plugins` は private なので、公開読者の導入経路はこちら）
-2. feelflow-plugins の `.claude-plugin/marketplace.json` にも `github` source で
-   1 件追加（category は `development`。社内利用者向けの補足経路）
+1. 公開 repo 自身が公開 marketplace（社内 marketplace は private なので、公開読者の導入経路はこちら）
+2. 社内の marketplace にも登録する（社内利用者向けの補足経路）
 3. 導入コマンド（記事 B に転記する。公開経路）
 
 ```bash
@@ -147,7 +149,7 @@ Codex CLI は同じ marketplace を読めるため、記事 B では 1 行の補
 
 ### 動作確認
 
-公開前に `feelflow-website-2026` を検査対象にして 1 周回し、所見レポートを
+公開前に自社サイトの repo を検査対象にして 1 周回し、所見レポートを
 記事 B の実行例に使う。所見や食い違いが出ても隠さず載せる。
 
 ### テスト
