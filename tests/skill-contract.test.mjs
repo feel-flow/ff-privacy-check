@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -215,6 +216,30 @@ test("SKILL.md has frontmatter, references, stages and read-only rules", () => {
   assert.match(skill, /この検査で見つからないもの/, "固定節への言及が無い");
   assert.match(skill, /段 1\.5 に戻って/, "実測で新たに見つかった食い違いを段 1.5 へ戻す規定が無い");
   assert.match(skill, /上書きしない/, "同日再実行でレポートを上書きしない規定が無い");
+});
+
+test("the read-time mask hides short and quoted-key secrets (behavioral, bash and zsh)", () => {
+  const skill = read(join(skillDir, "SKILL.md"));
+  const m = skill.match(/sed -n "<行番号>p" <path> \| (sed -E ".*?\/Ig")`/s);
+  assert.ok(m, "SKILL.md に該当行を開く sed が無い");
+  const mask = m[1];
+  const sample = [
+    '{"password":"short","token":"abc","user":"ok"}',
+    'const o = { maxAge: 3600, password: "demo-short-key" };',
+    "API_KEY=abc Authorization: Bearer xyz",
+  ].join("\n");
+  for (const shell of ["bash", "zsh"]) {
+    const { status, stdout } = spawnSync(
+      shell,
+      ["-c", `printf '%s' "$0" | ${mask}`, sample],
+      { encoding: "utf8" }
+    );
+    assert.equal(status, 0, `${shell}: sed が失敗`);
+    for (const secret of ['"short"', '"abc"', "demo-short-key", "=abc", "Bearer xyz"]) {
+      assert.ok(!stdout.includes(secret), `${shell}: 秘密情報が残っている: ${secret} → ${stdout}`);
+    }
+    assert.ok(stdout.includes('"user":"ok"'), `${shell}: 秘密情報でない値まで消えている`);
+  }
 });
 
 test("README documents the command, the five stages and ignore targets", () => {

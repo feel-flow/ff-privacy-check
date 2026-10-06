@@ -9,7 +9,7 @@ Q1（個人情報の種類）、Q2（本人確認書類の画像）、Q3（保�
 
 ## 実測手順
 
-対象ディレクトリの中で読む。一致行を出力する grep はすべて `| cut -d: -f1,2` で path:line だけを出す（値をツール出力に乗せない）。該当行の中身を確認するときは次の形で開き、引用符で囲まれた 16 文字以上と `=` / `:` の後ろの 20 文字以上を伏せ、さらに password / secret / token / api_key / authorization / cookie / private_key / client_secret などのキー名に続く値は長さによらず伏せる（`I` フラグで大文字小文字を無視。bash / zsh で実測）: `sed -n "<行番号>p" <path> | sed -E "s/\"[^\"]{16,}\"/\"***\"/g; s/'[^']{16,}'/'***'/g; s/([:=][[:space:]]*)[^[:space:]\"']{20,}/\1***/g; s/((password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|cookie|private[_-]?key|client[_-]?secret)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*)(\"[^\"]*\"|'[^']*'|[^[:space:],;]+)/\1***/Ig"`。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。
+対象ディレクトリの中で読む。一致行を出力する grep はすべて `| cut -d: -f1,2` で path:line だけを出す（値をツール出力に乗せない）。該当行の中身を確認するときは次の形で開き、引用符で囲まれた 16 文字以上と `=` / `:` の後ろの 20 文字以上を伏せ、さらに password / secret / token / api_key / authorization / cookie / private_key / client_secret などのキー名に続く値は長さによらず伏せる（キー名が JSON のように引用符で囲まれていても効く。`I` フラグで大文字小文字を無視。bash / zsh で実測）: `sed -n "<行番号>p" <path> | sed -E "s/\"[^\"]{16,}\"/\"***\"/g; s/'[^']{16,}'/'***'/g; s/([:=][[:space:]]*)[^[:space:]\"']{20,}/\1***/g; s/((password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|cookie|private[_-]?key|client[_-]?secret)[A-Za-z0-9_]*[\"']?[[:space:]]*[:=][[:space:]]*)(\"[^\"]*\"|'[^']*'|[^,;]+)/\1***/Ig"`。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。
 `.env*` の中身は読まない（追跡されているかどうかだけを `git ls-files` で見る。全 grep が `--exclude='.env*'` で除外する）。
 
 ```bash
