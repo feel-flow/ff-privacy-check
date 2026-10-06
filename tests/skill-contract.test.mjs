@@ -127,6 +127,12 @@ test("every pattern reference has the four sections and read-only commands", () 
           assert.match(line, EXCLUDE_DIR, `${file}: grep に除外ディレクトリが無い: ${line.slice(0, 60)}`);
           assert.match(line, EXCLUDE_ENV, `${file}: grep に .env* の除外が無い: ${line.slice(0, 60)}`);
         }
+        if (/^grep /.test(line) && !/\s-r?l\S*\s/.test(line) && !/-rli?E? /.test(line)) {
+          assert.ok(
+            /\| cut -d: -f1,2/.test(line) || /\*\*\*/.test(line),
+            `${file}: 一致行を出す grep に伏せ字も cut も無い: ${line.slice(0, 60)}`
+          );
+        }
         if (/^find /.test(line)) {
           assert.match(line, /-name node_modules .*-name target \\\) -prune/, `${file}: find の prune が不足: ${line.slice(0, 60)}`);
         }
@@ -182,6 +188,7 @@ test("SKILL.md has frontmatter, references, stages and read-only rules", () => {
   assert.match(skill, EXCLUDE_DIR, "除外ディレクトリの記載が無い");
   assert.match(skill, EXCLUDE_ENV, ".env* を読まない規定が無い");
   assert.match(skill, /値をレポートに書かない/, "秘密情報の値を書かない規定が無い");
+  assert.match(skill, /伏せ字/, "一致行を出す grep に伏せ字を通す規定が無い");
   assert.match(skill, /Q1 から/, "profile.md が読めないときの規定が無い");
   assert.match(
     skill,
