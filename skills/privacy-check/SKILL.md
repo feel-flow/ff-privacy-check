@@ -38,7 +38,7 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 
 判定はしない。「何がどこにあるか」だけを押さえ、段 1 の質問文の具体化と段 1.5 の表に使う。
 
-1. 対象ディレクトリを決める。引数が無ければカレント repo。`.privacy-check/profile.md` があれば Q10 の答えを使う。以後の `.privacy-check/` と所見レポートは**対象ディレクトリの直下**に置く（cwd ではない）
+1. 対象ディレクトリを決める。引数があればそれ。無ければ、まず repo 内の保存済みプロファイルを探す: `find . \( -name node_modules -o -name vendor -o -name dist -o -name build -o -name .git -o -name coverage -o -name .next -o -name .astro -o -name .venv -o -name venv -o -name __pycache__ -o -name .vercel -o -name .output -o -name .nuxt -o -name .svelte-kit -o -name target \) -prune -o -path '*/.privacy-check/profile.md' -print 2>/dev/null`。1 件なら、その profile.md の「対象」を前回の対象として提示し、再利用するかを段 1 の最初の 1 問で聞く（前回がサブディレクトリでも repo ルートから再実行できる）。複数なら一覧からどれを使うか聞く。0 件ならカレント repo を対象にする。以後の `.privacy-check/` と所見レポートは**対象ディレクトリの直下**に置く（cwd ではない）
 2. 次を読む: 言語とフレームワーク（マニフェスト）、ORM / スキーマ / マイグレーションの場所、認証ライブラリ、
    セッション管理の実装箇所、ログライブラリと出力箇所、CI 設定、スケジュールジョブ、バックアップ定義、
    アップロード処理、本人確認書類に関わる語、Webhook 受信処理、外部 API 呼び出し、監視 SDK、自動更新設定（Dependabot / Renovate）
@@ -54,7 +54,7 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 ## 段 1: 問診
 
 1. `references/question-bank.md` を読む
-2. `.privacy-check/profile.md` があり、保存形式どおりに読めるときは「前回の答えを使う / 更新する / 答え直す」の 1 問だけを出す。
+2. 段 0 で見つけた `.privacy-check/profile.md`（対象ディレクトリ直下、またはサブディレクトリで見つかった前回のもの）が保存形式どおりに読めるときは「前回の答えを使う / 更新する / 答え直す」の 1 問だけを出す。
    読めない（列が欠けている・Q 番号が揃わない）ときはその旨を 1 行伝え、**Q1 から**聞き直す。黙って空欄で進まない
 3. ホストの質問ツール（Claude Code では AskUserQuestion。無いホストでは通常の対話）で Q1〜Q10 を 1 問ずつ聞く。段 0 の検出結果で質問文を具体化する（question-bank の表に従う）。AskUserQuestion は 1 問あたり選択肢 2〜4 件なので、question-bank で `####` の小問に分かれている問い（Q1 / Q4 / Q9）は同じ呼び出しで小問をまとめて聞く（1 回の呼び出しに最大 4 問）
 4. 「分からない」は常に選べるようにし、所見では「要確認」として扱う
