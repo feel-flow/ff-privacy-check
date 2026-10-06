@@ -46,3 +46,14 @@ test("report template has the fixed sections", () => {
   assert.match(template, /^## 次の一歩$/m);
   assert.match(template, /未検出/, "下読みで何も読めなかったときの表記が無い");
 });
+
+test("question bank has Q1..Q10 and the re-run rule", () => {
+  const bank = read(join(refDir, "question-bank.md"));
+  for (let i = 1; i <= 10; i += 1) {
+    assert.match(bank, new RegExp(`^### Q${i}: `, "m"), `Q${i} が無い`);
+  }
+  assert.doesNotMatch(bank, /^### Q11: /m, "Q11 以降は仕様外");
+  assert.match(bank, /^## 下読みによる質問文の具体化$/m);
+  assert.match(bank, /^## profile\.md がある場合$/m);
+  assert.match(bank, /^## profile\.md の保存形式$/m);
+});
