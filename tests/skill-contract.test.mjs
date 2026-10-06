@@ -199,6 +199,7 @@ test("SKILL.md has frontmatter, references, stages and read-only rules", () => {
   assert.match(skill, EXCLUDE_ENV, ".env* を読まない規定が無い");
   assert.match(skill, /値をレポートに書かない/, "秘密情報の値を書かない規定が無い");
   assert.match(skill, /\[\^\\"\]\{16,\}/, "該当行を開くときの伏せ字（任意文字 16 文字以上）の規定が無い");
+  assert.match(skill, /password\|passwd\|pwd\|secret\|token\|api\[_-\]\?key/, "キー名に続く値を長さによらず伏せる規定が無い");
   assert.match(skill, /Q1 から/, "profile.md が読めないときの規定が無い");
   assert.match(
     skill,
