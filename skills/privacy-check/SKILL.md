@@ -32,7 +32,7 @@ description: 個人情報流出につながるシステム側の欠陥を簡易�
 - 禁止: ビルド、テスト実行、パッケージのインストール、外部送信（`npm audit` など registry へ問い合わせるコマンドを含む）、git 書き込み（commit / push / stash / checkout）、ファイル作成（例外は段 3 の所見レポートと `.privacy-check/profile.md` の 2 つだけ）
 - 除外ディレクトリ: `node_modules` / `vendor` / `dist` / `build` / `.git` / `coverage` / `.next` / `.astro` / `.venv` / `venv` / `__pycache__` / `.vercel` / `.output` / `.nuxt` / `.svelte-kit` / `target`。grep には `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target}` を付け（brace 展開は bash / zsh の両方で効く。変数にまとめると zsh では単語分割されないので使わない）、find には同じ名前の prune を入れる
 - 除外ファイル: `--exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml'`。`.env*` の中身は読まない（追跡状態だけを `git ls-files` で見る）。minified JS と lock ファイルは 1 行が巨大で `head` の枠を食いつぶす
-- 読んだ秘密情報（キー・トークン・パスワード）は値をレポートに書かない。パスと行番号だけ書く。秘密情報や URL 埋め込みキーを探す grep は `cut -d: -f1,2` で path:line に切り詰めてから出力し、一致行の中身をツール出力にも出さない
+- 読んだ秘密情報（キー・トークン・パスワード）は値をレポートに書かない。パスと行番号だけ書く。秘密情報や URL 埋め込みキーを探す grep は `cut -d: -f1,2` で path:line に切り詰めてから出力し、一致行の中身をツール出力にも出さない。一致行を出力する他の grep にも伏せ字の sed（引用符で囲まれた 16 文字以上の英数字列を `***` へ）を通し、該当行を開いて確認するときも同じ sed を通す
 
 ## 段 0: 下読み
 

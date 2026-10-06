@@ -9,18 +9,18 @@ Q9（外部委託先・外部 API の数と権限）。Q9 が「外部連携は�
 
 ## 実測手順
 
-対象ディレクトリの中で読む。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。find は同じ 8 ディレクトリを名前で prune する（深い階層の `node_modules` も除く）。
+対象ディレクトリの中で読む。一致行を出力する grep には伏せ字の sed（引用符で囲まれた 16 文字以上の英数字列を `***` に置き換える。後方参照は BSD sed の -E で効かないので引用符の種類ごとに書く）を通し、秘密情報を探す grep は `cut -d: -f1,2` で path:line だけにする。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。find は同じ 8 ディレクトリを名前で prune する（深い階層の `node_modules` も除く）。
 
 ```bash
 # SBOM 生成・依存関係の可視化
-grep -rniE "sbom|cyclonedx|spdx|syft" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' .github/workflows/ package.json Makefile 2>/dev/null | head -10
+grep -rniE "sbom|cyclonedx|spdx|syft" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' .github/workflows/ package.json Makefile 2>/dev/null | sed -E "s/\"[A-Za-z0-9_\/+=.-]{16,}\"/\"***\"/g; s/'[A-Za-z0-9_\/+=.-]{16,}'/'***'/g" | head -10
 # インストール時に任意コードが走るスクリプト（サブディレクトリの package.json も含む）
-grep -rnE "\"(pre|post)install\"" --include=package.json --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -20
+grep -rnE "\"(pre|post)install\"" --include=package.json --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | sed -E "s/\"[A-Za-z0-9_\/+=.-]{16,}\"/\"***\"/g; s/'[A-Za-z0-9_\/+=.-]{16,}'/'***'/g" | head -20
 # 外部 API 呼び出しの所在（URL にキーが埋め込まれていても値を出さないよう path:line だけ出し、該当行は個別に開いて確認する）
 grep -rnE "(fetch|axios|got|requests|httpx|http\.get|urllib)\(.*https?://" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | cut -d: -f1,2 | head -40
 # Webhook 受信と署名検証
 grep -rniE "webhook" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' -l . | head -20
-grep -rniE "signature|hmac|verify|x-hub-signature|stripe-signature" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -20
+grep -rniE "signature|hmac|verify|x-hub-signature|stripe-signature" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | sed -E "s/\"[A-Za-z0-9_\/+=.-]{16,}\"/\"***\"/g; s/'[A-Za-z0-9_\/+=.-]{16,}'/'***'/g" | head -20
 # 内部 API ルートに認証ミドルウェアが掛かっているか（ルート定義の一覧）
 find . \( -name node_modules -o -name vendor -o -name dist -o -name build -o -name .git -o -name coverage -o -name .next -o -name .astro -o -name .venv -o -name venv -o -name __pycache__ -o -name .vercel -o -name .output -o -name .nuxt -o -name .svelte-kit -o -name target \) -prune -o \( -path "*/api/*" -o -path "*/routes/*" \) \( -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.rb" -o -name "*.go" -o -name "*.php" \) -print 2>/dev/null | head -40
 ```

@@ -9,7 +9,7 @@ Q8（パッチ適用のリードタイム）。
 
 ## 実測手順
 
-対象ディレクトリの中で読む。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。
+対象ディレクトリの中で読む。一致行を出力する grep には伏せ字の sed（引用符で囲まれた 16 文字以上の英数字列を `***` に置き換える。後方参照は BSD sed の -E で効かないので引用符の種類ごとに書く）を通し、秘密情報を探す grep は `cut -d: -f1,2` で path:line だけにする。すべての grep に共通の除外指定（brace 展開の `--exclude-dir` 16 ディレクトリと、`.env*` / minified / lock ファイルの `--exclude`）を付ける。brace 展開は bash / zsh の両方で効く。`.env*` は値が入っているので一致行を出さない。
 
 ```bash
 # 依存関係の自動更新（repo ルートと各アプリのディレクトリ）
@@ -19,9 +19,9 @@ find . \( -name node_modules -o -name vendor -o -name dist -o -name build -o -na
 # マニフェストの所在（lock と対にして「lock の無いアプリ」を特定する）
 find . \( -name node_modules -o -name vendor -o -name dist -o -name build -o -name .git -o -name coverage -o -name .next -o -name .astro -o -name .venv -o -name venv -o -name __pycache__ -o -name .vercel -o -name .output -o -name .nuxt -o -name .svelte-kit -o -name target \) -prune -o \( -name package.json -o -name pyproject.toml -o -name requirements.txt -o -name Gemfile -o -name go.mod -o -name Cargo.toml \) -print 2>/dev/null | head -20
 # CI で監査・更新を回しているか
-grep -rniE "audit|snyk|trivy|grype|osv-scanner|dependabot|renovate" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' .github/workflows/ .gitlab-ci.yml 2>/dev/null | head -20
+grep -rniE "audit|snyk|trivy|grype|osv-scanner|dependabot|renovate" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' .github/workflows/ .gitlab-ci.yml 2>/dev/null | sed -E "s/\"[A-Za-z0-9_\/+=.-]{16,}\"/\"***\"/g; s/'[A-Za-z0-9_\/+=.-]{16,}'/'***'/g" | head -20
 # コンテナのベースイメージの固定（:latest は追従も再現もできない）
-grep -rnE "^FROM " --include="Dockerfile*" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | head -20
+grep -rnE "^FROM " --include="Dockerfile*" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' . | sed -E "s/\"[A-Za-z0-9_\/+=.-]{16,}\"/\"***\"/g; s/'[A-Za-z0-9_\/+=.-]{16,}'/'***'/g" | head -20
 # デプロイの自動化（手動デプロイはパッチ適用を遅らせる）。CI のほか、git 連携デプロイのプラットフォーム設定も自動化と数える
 grep -rliE "deploy|release" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro,.venv,venv,__pycache__,.vercel,.output,.nuxt,.svelte-kit,target} --exclude='.env*' --exclude='*.min.js' --exclude='*.map' --exclude='*.lock' --exclude='*-lock.json' --exclude='*-lock.yaml' .github/workflows/ .gitlab-ci.yml 2>/dev/null | head -10
 find . \( -name node_modules -o -name vendor -o -name dist -o -name build -o -name .git -o -name coverage -o -name .next -o -name .astro -o -name .venv -o -name venv -o -name __pycache__ -o -name .vercel -o -name .output -o -name .nuxt -o -name .svelte-kit -o -name target \) -prune -o \( -name vercel.json -o -name netlify.toml -o -name fly.toml -o -name render.yaml -o -name app.yaml -o -name Procfile -o -name wrangler.toml -o -name amplify.yml \) -print 2>/dev/null | head -10
