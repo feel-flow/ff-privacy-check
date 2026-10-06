@@ -23,3 +23,26 @@ test("plugin.json declares name / version / license / description", () => {
     "https://github.com/feel-flow/ff-privacy-check"
   );
 });
+
+test("report template has the fixed sections", () => {
+  const template = read(join(refDir, "report-template.md"));
+  assert.match(template, /^## サマリ$/m);
+  assert.match(template, /^## 段 1\.5 の確認結果$/m);
+  assert.match(template, /^## パターン別所見$/m);
+  for (const label of [
+    "① 管理の隙",
+    "② パッチ前侵入",
+    "③ アカウント奪取",
+    "④ サプライチェーン",
+    "⑤ 過剰保持",
+  ]) {
+    assert.match(
+      template,
+      new RegExp(`^### ${label}$`, "m"),
+      `${label} の小見出しが無い`
+    );
+  }
+  assert.match(template, /^## この検査で見つからないもの$/m);
+  assert.match(template, /^## 次の一歩$/m);
+  assert.match(template, /未検出/, "下読みで何も読めなかったときの表記が無い");
+});
