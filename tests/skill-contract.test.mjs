@@ -216,6 +216,7 @@ test("SKILL.md has frontmatter, references, stages and read-only rules", () => {
   assert.match(skill, /この検査で見つからないもの/, "固定節への言及が無い");
   assert.match(skill, /段 1\.5 に戻って/, "実測で新たに見つかった食い違いを段 1.5 へ戻す規定が無い");
   assert.match(skill, /上書きしない/, "同日再実行でレポートを上書きしない規定が無い");
+  assert.match(skill, /\*\/\.privacy-check\/profile\.md/, "repo 内の保存済みプロファイルを探索する規定が無い");
 });
 
 test("the read-time mask hides short and quoted-key secrets (behavioral, bash and zsh)", () => {
