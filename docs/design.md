@@ -2,7 +2,7 @@
 
 原本は feel-flow/feelflow-website-2026 の `docs/superpowers/specs/2026-10-06-privacy-check-plugin-and-articles-design.md`（Issue #2126）。ここには plugin に関わる「5 つの欠陥パターン」「第 1 節」「第 2 節」を写している。記事側の設計は原本を参照。
 
-実装（`skills/privacy-check/SKILL.md` と `references/`）は、公開前の read-only レビューで次を spec より厳しくしている: 段 1.5 の表は裁定列つきの 5 列、`未検出` は「無い」ではなく「読めなかった」、問診の答えだけで検査を省かない（段 0 で未検出の場合のみ）、Q10 で対象が変わったら段 0 をやり直す、除外ディレクトリは 16 個と `.env*` / minified / lock、秘密情報を探す grep は path:line だけを出力する。spec と実装が食い違うときは実装を正とする。
+実装（`skills/privacy-check/SKILL.md` と `references/`）は、公開前のレビューで次を spec より厳しくしている: 段 1.5 の表は裁定列つきの 5 列、`未検出` は「無い」ではなく「読めなかった」、問診の答えだけで検査を省かない（段 0 で未検出の場合のみ）、Q10 で対象が変わったら段 0 をやり直す、段 2 で新たに見つかった食い違いは段 1.5 へ戻す、除外ディレクトリは 16 個と `.env*` / minified / lock、一致行を出す grep は path:line のみ出力し該当行は伏せ字 sed を通して開く、問診の選択肢は AskUserQuestion の上限（2〜4 件）に合わせて小問に分ける、repo 内の保存済みプロファイルを段 0 で探索する。spec と実装が食い違うときは実装を正とする。
 
 ## 5 つの欠陥パターン（共通の軸）
 
@@ -56,12 +56,14 @@ Q10 の後、次の表を 1 枚出し「この理解で検査に進んでよい�
 
 | パターン | 問診の答え | コードから読めたこと | 食い違い |
 | --- | --- | --- | --- |
-| ③ | MFA あり、外部 IdP | `next-auth` 使用、MFA 設定は未検出 | あり |
-| ⑤ | 本人確認画像は保管なし | `uploads/` に画像保存処理あり | あり |
+| ③ | 自前実装、MFA あり | `passport-local` 使用、TOTP / WebAuthn の実装は未検出 | あり |
+| ⑤ | 本人確認画像は保管なし | `kyc/upload.ts` に免許証画像の保存処理あり | あり |
 | ① | 夜間はアラートのみ | Sentry 設定あり、しきい値は未検出 | なし |
+| ③ | 外部 IdP、MFA あり | MFA 設定は未検出（IdP 側の設定で repo には現れない） | なし（要確認として所見に残す） |
+| ⑤ | 本人確認画像は保管なし | `uploads/avatar.ts` に一般画像の保存処理あり | なし（本人確認書類と結びつかない） |
 
 食い違いがある行は「問診の答えを直す / コードの読みが違う / そのまま進む」
-から選べる。確定した表を `profile.md` に保存し、以後の実測はこれを前提に走る。
+から選べる。外部 IdP の MFA のように repo に現れない設定は食い違いにせず「要確認」として所見に残す。一般の画像アップロードは本人確認書類と結びつく（kyc / identity / id_card / license / passport と同じファイルやパス）場合だけ食い違いにする。確定した表を `profile.md` に保存し、以後の実測はこれを前提に走る。
 「そのまま進む」とした行は段 3 の所見に必ず残す。自己申告と実装の不一致は
 それ自体が②③の典型要因だからである。
 
@@ -80,7 +82,7 @@ address / birth など）が渡っていないか。ORM スキーマに平文の
 
 ### 段 3: 所見
 
-`privacy-check-report-YYYYMMDD.md` をカレント作業ディレクトリに出力する。
+`privacy-check-report-YYYYMMDD.md` を対象ディレクトリ（Q10 で確定した場所）の直下に出力する（同日 2 回目以降は `-2` `-3` の連番。`.privacy-check/profile.md` も同じ場所）。
 
 1. サマリ 3 行（最重要の所見、全体の優先度、次の一歩）
 2. パターン①〜⑤ごとに「問診の答え / 実測で見つかった事実 / 所見と優先度
@@ -105,6 +107,7 @@ public、Apache-2.0。repo ルートがそのまま plugin ルート
 ```text
 ff-privacy-check/
   .claude-plugin/plugin.json      name / version 0.1.0 / description / license
+  .claude-plugin/marketplace.json この repo 自身を公開 marketplace にする（plugins[0].source は ./）
   LICENSE
   README.md                        導入 3 行 + 使い方 + 見つからないものの明記
   docs/
@@ -129,14 +132,15 @@ ff-work-toolkit と違い、private 側からの生成器は置かない。社�
 
 ### 配布
 
-1. 新 repo を作成し、初版を PR → merge → `v0.1.0` tag
-2. feelflow-plugins の `.claude-plugin/marketplace.json` に `github` source で
-   1 件追加（category は `development`）
-3. 導入コマンド（記事 B に転記する）
+1. 新 repo を作成し、初版を PR → merge → `v0.1.0` tag。repo 自身が公開 marketplace
+   （`feelflow-plugins` は private なので、公開読者の導入経路はこちら）
+2. feelflow-plugins の `.claude-plugin/marketplace.json` にも `github` source で
+   1 件追加（category は `development`。社内利用者向けの補足経路）
+3. 導入コマンド（記事 B に転記する。公開経路）
 
 ```bash
-claude plugin marketplace add feel-flow/feelflow-plugins
-claude plugin install ff-privacy-check@feelflow-plugins
+claude plugin marketplace add feel-flow/ff-privacy-check
+claude plugin install ff-privacy-check@ff-privacy-check
 ```
 
 Codex CLI は同じ marketplace を読めるため、記事 B では 1 行の補足に留める。
