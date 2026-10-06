@@ -9,20 +9,19 @@ Q8（パッチ適用のリードタイム）。
 
 ## 実測手順
 
-対象ディレクトリの中で読む。ブロック先頭の `EX` が共通の除外ディレクトリで、すべての grep に付ける。
+対象ディレクトリの中で読む。すべての grep に共通の除外指定 `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付ける（brace 展開は bash / zsh の両方で 8 個の引数に展開される）。
 
 ```bash
-EX='--exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=coverage --exclude-dir=.next --exclude-dir=.astro'
 # 依存関係の自動更新
 ls .github/dependabot.yml .github/dependabot.yaml renovate.json .renovaterc .renovaterc.json 2>/dev/null
 # lock ファイルの有無（再現可能なビルドか）
 ls package-lock.json pnpm-lock.yaml yarn.lock poetry.lock Pipfile.lock Gemfile.lock go.sum Cargo.lock 2>/dev/null
 # CI で監査・更新を回しているか
-grep -rniE "audit|snyk|trivy|grype|osv-scanner|dependabot|renovate" $EX .github/workflows/ .gitlab-ci.yml 2>/dev/null | head -20
+grep -rniE "audit|snyk|trivy|grype|osv-scanner|dependabot|renovate" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} .github/workflows/ .gitlab-ci.yml 2>/dev/null | head -20
 # コンテナのベースイメージの固定（:latest は追従も再現もできない）
-grep -rnE "^FROM " --include="Dockerfile*" $EX . | head -20
+grep -rnE "^FROM " --include="Dockerfile*" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
 # デプロイの自動化（手動デプロイはパッチ適用を遅らせる）
-grep -rliE "deploy|release" $EX .github/workflows/ 2>/dev/null | head -10
+grep -rliE "deploy|release" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} .github/workflows/ 2>/dev/null | head -10
 ```
 
 読み取ること:

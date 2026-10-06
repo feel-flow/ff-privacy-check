@@ -9,19 +9,18 @@ Q9（外部委託先・外部 API の数と権限）。Q9 が「外部連携は�
 
 ## 実測手順
 
-対象ディレクトリの中で読む。ブロック先頭の `EX` が共通の除外ディレクトリで、すべての grep に付ける。find は同じ 8 ディレクトリを名前で prune する（深い階層の `node_modules` も除く）。
+対象ディレクトリの中で読む。すべての grep に共通の除外指定 `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付ける（brace 展開は bash / zsh の両方で 8 個の引数に展開される）。find は同じ 8 ディレクトリを名前で prune する（深い階層の `node_modules` も除く）。
 
 ```bash
-EX='--exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=coverage --exclude-dir=.next --exclude-dir=.astro'
 # SBOM 生成・依存関係の可視化
-grep -rniE "sbom|cyclonedx|spdx|syft" $EX .github/workflows/ package.json Makefile 2>/dev/null | head -10
+grep -rniE "sbom|cyclonedx|spdx|syft" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} .github/workflows/ package.json Makefile 2>/dev/null | head -10
 # インストール時に任意コードが走るスクリプト
 grep -nE "\"(pre|post)install\"" package.json 2>/dev/null
 # 外部 API 呼び出しと、その認証
-grep -rnE "(fetch|axios|got|requests|httpx|http\.get|urllib)\(.*https?://" $EX . | head -40
+grep -rnE "(fetch|axios|got|requests|httpx|http\.get|urllib)\(.*https?://" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -40
 # Webhook 受信と署名検証
-grep -rniE "webhook" $EX -l . | head -20
-grep -rniE "signature|hmac|verify|x-hub-signature|stripe-signature" $EX . | head -20
+grep -rniE "webhook" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} -l . | head -20
+grep -rniE "signature|hmac|verify|x-hub-signature|stripe-signature" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
 # 内部 API ルートに認証ミドルウェアが掛かっているか（ルート定義の一覧）
 find . \( -name node_modules -o -name vendor -o -name dist -o -name build -o -name .git -o -name coverage -o -name .next -o -name .astro \) -prune -o \( -path "*/api/*" -o -path "*/routes/*" \) -name "*.ts" -print 2>/dev/null | head -40
 ```

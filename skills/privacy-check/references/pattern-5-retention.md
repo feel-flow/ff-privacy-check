@@ -9,22 +9,21 @@ Q1（個人情報の種類）、Q2（本人確認書類の画像）、Q3（保�
 
 ## 実測手順
 
-対象ディレクトリの中で読む。ブロック先頭の `EX` が共通の除外ディレクトリで、すべての grep に付ける。
+対象ディレクトリの中で読む。すべての grep に共通の除外指定 `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付ける（brace 展開は bash / zsh の両方で 8 個の引数に展開される）。
 `.env` の中身は読まない（追跡されているかどうかだけを見る）。
 
 ```bash
-EX='--exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=coverage --exclude-dir=.next --exclude-dir=.astro'
 # スキーマ・モデルに含まれる個人情報カラム
-grep -rniE "email|phone|tel|address|zip|postal|birth|dob|gender|my_?number|mynumber|license|passport|ssn|credit|card_number" --include="*.prisma" --include="*.sql" --include="schema*.rb" --include="models.py" --include="*.entity.ts" --include="*schema*.ts" $EX . | head -60
+grep -rniE "email|phone|tel|address|zip|postal|birth|dob|gender|my_?number|mynumber|license|passport|ssn|credit|card_number" --include="*.prisma" --include="*.sql" --include="schema*.rb" --include="models.py" --include="*.entity.ts" --include="*schema*.ts" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -60
 # ログへの個人情報の出力
-grep -rnE "(logger|log|console)\.(log|info|debug|warn|error)\(.*(email|phone|address|birth|password|token|card)" $EX . | head -40
+grep -rnE "(logger|log|console)\.(log|info|debug|warn|error)\(.*(email|phone|address|birth|password|token|card)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -40
 # アプリ層の暗号化
-grep -rniE "encrypt|cipher|kms|pgcrypto|crypto\.(createCipher|subtle)" $EX . | head -20
+grep -rniE "encrypt|cipher|kms|pgcrypto|crypto\.(createCipher|subtle)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
 # 画像アップロードと保存先
-grep -rniE "multer|formidable|busboy|putObject|upload\(|storage\.(from|bucket)|createWriteStream" $EX . | head -30
-grep -rniE "kyc|identity|id_card|license|passport" $EX -l . | head -20
+grep -rniE "multer|formidable|busboy|putObject|upload\(|storage\.(from|bucket)|createWriteStream" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -30
+grep -rniE "kyc|identity|id_card|license|passport" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} -l . | head -20
 # 保持期限・削除・匿名化のジョブ
-grep -rniE "retention|purge|anonymi[sz]e|pseudonymi[sz]e|delete.*(older|before|expired)|cron|schedule" $EX . | head -40
+grep -rniE "retention|purge|anonymi[sz]e|pseudonymi[sz]e|delete.*(older|before|expired)|cron|schedule" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -40
 # .env が追跡対象になっていないか
 grep -nE "^\.env" .gitignore 2>/dev/null; git ls-files | grep -E "^\.env($|\.)" | grep -vE "\.(example|sample)$"
 ```

@@ -9,22 +9,21 @@ Q4（認証方式と MFA）、Q5（管理者アカウントの共有）。
 
 ## 実測手順
 
-対象ディレクトリの中で読む。ブロック先頭の `EX` が共通の除外ディレクトリで、すべての grep に付ける。
+対象ディレクトリの中で読む。すべての grep に共通の除外指定 `--exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro}` を付ける（brace 展開は bash / zsh の両方で 8 個の引数に展開される）。
 秘密情報らしき値が見つかっても、レポートには**パスと行番号だけ**を書き、値を書かない。
 
 ```bash
-EX='--exclude-dir=node_modules --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=coverage --exclude-dir=.next --exclude-dir=.astro'
 # 認証ライブラリ
-grep -rniE "next-auth|@auth/core|passport|devise|django\.contrib\.auth|firebase/auth|@supabase/(auth|ssr)|lucia|better-auth|auth0|amazon-cognito|keycloak" --include="package.json" --include="Gemfile" --include="requirements*.txt" --include="pyproject.toml" --include="*.ts" --include="*.py" $EX . | head -20
+grep -rniE "next-auth|@auth/core|passport|devise|django\.contrib\.auth|firebase/auth|@supabase/(auth|ssr)|lucia|better-auth|auth0|amazon-cognito|keycloak" --include="package.json" --include="Gemfile" --include="requirements*.txt" --include="pyproject.toml" --include="*.ts" --include="*.py" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
 # MFA の実装
-grep -rniE "totp|otpauth|webauthn|fido|passkey|mfa|two[_-]?factor|2fa" $EX . | head -30
+grep -rniE "totp|otpauth|webauthn|fido|passkey|mfa|two[_-]?factor|2fa" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -30
 # セッション・Cookie の設定
-grep -rniE "maxAge|max_age|expires|ttl|SESSION_COOKIE_AGE|httpOnly|sameSite|secure:\s*(true|false)" $EX . | head -40
+grep -rniE "maxAge|max_age|expires|ttl|SESSION_COOKIE_AGE|httpOnly|sameSite|secure:\s*(true|false)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -40
 # パスワードの保存方式
-grep -rniE "bcrypt|argon2|scrypt|pbkdf2" $EX . | head -10
-grep -rniE "(md5|sha1)\(.*(pass|pwd)" $EX . | head -10
+grep -rniE "bcrypt|argon2|scrypt|pbkdf2" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -10
+grep -rniE "(md5|sha1)\(.*(pass|pwd)" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -10
 # ハードコードされた秘密情報（.env.example は除く）
-grep -rnE "(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]" $EX --exclude="*.example" --exclude="*.sample" . | head -20
+grep -rnE "(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} --exclude="*.example" --exclude="*.sample" . | head -20
 ```
 
 読み取ること:

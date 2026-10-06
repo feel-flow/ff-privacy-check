@@ -80,8 +80,8 @@ test("every pattern reference has the four sections", () => {
     assert.match(body, /```bash/, `${file} に実測コマンドの例が無い`);
     assert.match(
       body,
-      /^EX='--exclude-dir=node_modules /m,
-      `${file} の実測ブロックに共通の除外変数 EX が無い`
+      /--exclude-dir=\{node_modules,vendor,dist,build,\.git,coverage,\.next,\.astro\}/,
+      `${file} の grep に共通の除外指定（brace 展開形式）が無い`
     );
   }
 });
