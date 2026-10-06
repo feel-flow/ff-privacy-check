@@ -14,8 +14,8 @@ Q9（外部委託先・外部 API の数と権限）。Q9 が「外部連携は�
 ```bash
 # SBOM 生成・依存関係の可視化
 grep -rniE "sbom|cyclonedx|spdx|syft" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} .github/workflows/ package.json Makefile 2>/dev/null | head -10
-# インストール時に任意コードが走るスクリプト
-grep -nE "\"(pre|post)install\"" package.json 2>/dev/null
+# インストール時に任意コードが走るスクリプト（サブディレクトリの package.json も含む）
+grep -rnE "\"(pre|post)install\"" --include=package.json --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -20
 # 外部 API 呼び出しと、その認証
 grep -rnE "(fetch|axios|got|requests|httpx|http\.get|urllib)\(.*https?://" --exclude-dir={node_modules,vendor,dist,build,.git,coverage,.next,.astro} . | head -40
 # Webhook 受信と署名検証
