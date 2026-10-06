@@ -6,12 +6,16 @@
 
 ## 導入
 
+このリポジトリ自体が公開マーケットプレイスです（アクセス権は不要）。
+
 ```bash
-claude plugin marketplace add feel-flow/feelflow-plugins
-claude plugin install ff-privacy-check@feelflow-plugins
+claude plugin marketplace add feel-flow/ff-privacy-check
+claude plugin install ff-privacy-check@ff-privacy-check
 ```
 
-Codex CLI は `codex plugin marketplace add feel-flow/feelflow-plugins` と `codex plugin add ff-privacy-check@feelflow-plugins`（問診は対話で 1 問ずつ進みます）。
+Codex CLI は `codex plugin marketplace add feel-flow/ff-privacy-check` と `codex plugin add ff-privacy-check@ff-privacy-check`（問診は対話で 1 問ずつ進みます）。
+
+フィールフロウ社内の `feelflow-plugins` marketplace（private）にも登録しているので、そちらを使っている人は `claude plugin install ff-privacy-check@feelflow-plugins` でも導入できます。
 
 ## 使い方
 
